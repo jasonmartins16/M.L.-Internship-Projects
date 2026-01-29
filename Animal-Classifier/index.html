@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Animal Classifier 🐾</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #e0f7fa, #ffffff);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      justify-content: center;
+    }
+
+    h1 {
+      color: #00796b;
+      margin-bottom: 20px;
+    }
+
+    .container {
+      background-color: #ffffff;
+      padding: 30px 40px;
+      border-radius: 15px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    input[type="file"] {
+      padding: 10px;
+      margin: 20px 0;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      background-color: #fafafa;
+    }
+
+    button {
+      padding: 12px 25px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      background-color: #00796b;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #004d40;
+    }
+
+    #result {
+      margin-top: 20px;
+      font-size: 1.2em;
+      color: #004d40;
+    }
+
+    .preview {
+      margin-top: 10px;
+      max-height: 200px;
+      object-fit: contain;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      display: block;       /* Needed to apply margin auto */
+      margin: 20px auto;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Animal Classifier 🐾</h1>
+    <form id="upload-form">
+      <input type="file" id="image-input" accept="image/*" required />
+      <br />
+      <img id="preview" class="preview" />
+      <br />
+      <button type="submit">Classify Animal</button>
+    </form>
+    <div id="result"></div>
+  </div>
+
+  <script>
+  const form = document.getElementById('upload-form');
+  const resultDiv = document.getElementById('result');
+  const preview = document.getElementById('preview');
+
+  // Show image preview
+  document.getElementById('image-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        preview.src = reader.result;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Handle form submission
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById('image-input');
+
+    if (!fileInput.files[0]) {
+      resultDiv.textContent = '❌ Please select an image.';
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    resultDiv.textContent = '⏳ Processing...';
+
+    try {
+      const response = await fetch('http://127.0.0.1:5000/predict', {
+        method: 'POST',
+        body: formData
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!response.ok) {
+        throw new Error(`Server error ${response.status}`);
+      } else if (!contentType.includes("application/json")) {
+        throw new Error("Response is not JSON");
+      }
+
+      const text = await response.text();
+      console.log("Raw response:", text);
+      const data = JSON.parse(text);
+      console.log("Server response:", data);
+
+      if (data.animal) {
+        resultDiv.textContent = `✅ Animal: ${data.animal}`;
+      } else {
+        resultDiv.textContent = `❌ Error: Animal not found in response.`;
+      }
+
+    } catch (error) {
+      resultDiv.textContent = '❌ Error: Could not classify image.';
+      console.error("Error from fetch:", error);
+    }
+  });
+</script>
+
+
+</body>
+</html>
